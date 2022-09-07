@@ -14,8 +14,8 @@ Will delete pv user1-dsmlp-datasets
 ## Configurations
 
 Configurations:
-- awsed API key
-- awsed API URL
+- awsed API key [x] - put into a .env var as of right now, will be moved to .json in a future
+- awsed API URL [x]
 - list of persistent volumes to delete, ex. {user}-dsmlp-datasets, {user}-dsmlp-datasets-nfs
 
 ## List of Persistent Volumes
