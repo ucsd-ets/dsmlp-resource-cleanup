@@ -74,7 +74,7 @@ Returns:
 
 - error
 */
-func GetEnrollments() ([]dsmlpUser, error) {
+func GetEnrollments(a AWSInterface) ([]dsmlpUser, error) {
 
 	var dsmlpUsers []dsmlpUser
 	reqUrl := config.ApiUrl + "/enrollments?env=dsmlp"
@@ -142,9 +142,5 @@ type DryRunController struct {
 }
 
 func main() {
-	result, _ := GetEnrollments()
-	for index := range result {
-		fmt.Println(result[index].Username)
-	}
 
 }
