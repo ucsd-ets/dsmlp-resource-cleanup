@@ -1,18 +1,34 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
+
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
 
 // AWSEd API formatted correctly
 var awsedApi = fmt.Sprintf("AWSEd api_key=%v", os.Getenv("AWSED_API_KEY"))
 
 // TODO: check that it's not null in main
-var config, _ = LoadConfig("config.json")
+var config, _ = loadConfig("config.json")
+
+var volumes = []string{
+	"-dsmlp-datasets",
+	"-dsmlp-datasets-nfs",
+	"-home",
+	"-home-nfs",
+	"-nbgrader",
+	"-support",
+	"-teams",
+}
 
 // Configurations:
 // awsed API key [x]
@@ -28,7 +44,7 @@ Loads and decods json configurations into a go struct
 
 Params:
 
-- filname an absolute or relative path to config.json
+- filname string - an absolute or relative path to config.json
 
 Returns:
 
@@ -36,7 +52,7 @@ Returns:
 
 - error if file not found
 */
-func LoadConfig(filename string) (Config, error) {
+func loadConfig(filename string) (Config, error) {
 	var config Config
 	configFile, err := os.Open(filename)
 
@@ -54,29 +70,33 @@ func LoadConfig(filename string) (Config, error) {
 }
 
 type AWSInterface interface {
-	GetEnrollments()
+	getEnrollments()
 }
 
 type AWSed struct {
 }
 
 // We just use usernames, since we don't need Uids or first names
-type dsmlpUser struct {
+type ActiveUser struct {
 	Username string `json:"username`
 }
 
 /*
-Gets a list of active enrolled users using dslmp
+Gets a list of names of active enrolled users using dslmp
+
+Params:
+
+- a AWSInterface - an instanse of AWS client
 
 Returns:
 
-- []dsmlpUser - a list of structures storing active user's usernames
+- []string - a list of active user's names
 
 - error
 */
-func GetEnrollments(a AWSInterface) ([]dsmlpUser, error) {
-
-	var dsmlpUsers []dsmlpUser
+func getEnrollments(a AWSed) ([]string, error) {
+	var activeUsersNames []string
+	var activeUsers []ActiveUser
 	reqUrl := config.ApiUrl + "/enrollments?env=dsmlp"
 
 	// Create a template for a standard GET request for all active enrolled users,
@@ -89,7 +109,7 @@ func GetEnrollments(a AWSInterface) ([]dsmlpUser, error) {
 
 	// Will never pop up, but compiler requires it to handle this err
 	if err != nil {
-		return dsmlpUsers, err
+		return activeUsersNames, err
 	}
 
 	// Add API key for header
@@ -97,17 +117,21 @@ func GetEnrollments(a AWSInterface) ([]dsmlpUser, error) {
 
 	response, err := http.DefaultClient.Do(request)
 	if err != nil {
-		return dsmlpUsers, fmt.Errorf("error reading HTTP response body: %v", err)
+		return activeUsersNames, fmt.Errorf("error reading HTTP response body: %v", err)
 	}
 
 	responseBytes, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		return dsmlpUsers, fmt.Errorf("error reading HTTP response body: %v", err)
+		return activeUsersNames, fmt.Errorf("error reading HTTP response body: %v", err)
 	}
 
-	json.Unmarshal(responseBytes, &dsmlpUsers)
+	json.Unmarshal(responseBytes, &activeUsers)
 
-	return dsmlpUsers, err
+	for _, user := range activeUsers {
+		activeUsersNames = append(activeUsersNames, user.Username)
+	}
+
+	return activeUsersNames, err
 
 }
 
@@ -116,31 +140,248 @@ type MockAWSed struct {
 }
 
 type K8sInterface interface {
-	GetNamespace()
-	DeleateNamespace()
-	DeleateNamespacePV()
+	clientSetup()
+	listNamespace()
+	deleateNamespace(namespace string)
+	deletePV(namespace string)
+	listDeleatedPV()
 }
 
 type K8s struct {
+	clientset *kubernetes.Clientset
+}
+
+/*
+Creates a valid clientset to work with k8s cluster and assigns it to K8s client
+
+Params:
+
+- k8s K8s - an instance of k8s client
+*/
+func clientSetup(k8s K8s) {
+
+	config, err := rest.InClusterConfig()
+
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	clientset, err := kubernetes.NewForConfig(config)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	k8s.clientset = clientset
+}
+
+/*
+Creates a list of names of actives namespaces
+
+Params:
+
+- k8s K8s - an instance of k8s client
+
+Returns:
+
+- []string - a list of all active namespaces in cluster
+*/
+func listNamespace(k8s K8s) []string {
+
+	var dslmpNamespacelist []string
+
+	namspaceList, err := k8s.clientset.CoreV1().
+		Namespaces().
+		List(context.Background(), v1.ListOptions{})
+
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	for _, n := range namspaceList.Items {
+		dslmpNamespacelist = append(dslmpNamespacelist, n.Name)
+	}
+
+	return dslmpNamespacelist
+}
+
+/*
+Deletes a namespace by name
+
+Params:
+
+- k8s K8s - an instance of k8s client
+
+- namespace string - name of a namespace that is deleated
+*/
+func deleateNamespace(k8s K8s, namespace string) {
+	err := k8s.clientset.CoreV1().
+		Namespaces().
+		Delete(context.Background(), namespace, v1.DeleteOptions{})
+
+	if err != nil {
+		fmt.Println(err)
+	}
+}
+
+/*
+Deletes PV by its name
+
+Params:
+
+- k8s K8s - an instance of k8s client
+
+- namePV string - name of a PV that is deleated
+*/
+func deletePV(k8s K8s, namePV string) {
+	err := k8s.clientset.CoreV1().
+		PersistentVolumes().
+		Delete(context.Background(), namePV, v1.DeleteOptions{})
+
+	if err != nil {
+		fmt.Println(err)
+	}
+
 }
 
 type MockK8s struct {
 }
 
-type ControllerInterface interface {
-	CleanupListPV()
-
-	// private helper functions
-	GetActiveK8sUsers()
-	DiffActive()
-}
-
 type Controller struct {
 }
 
-type DryRunController struct {
+/*
+Finds inactive namespaces by comparing users enrolled into AWSed and all existing namespaces.
+
+Params:
+
+- controller Controller - an instance of controller
+
+- enrolledUsers []string - a list of usernames of all active AWSed users
+
+- activeNamespaces []string - a list of usernames of all existing namespaces at k8
+
+Returns:
+
+-[]string -   a list of usernames in k8s that are not in AWSed
+*/
+func diffList(controller Controller, enrolledUsers []string, activeNamespaces []string) []string {
+
+	var diffList []string
+
+	for _, username := range activeNamespaces {
+		if belongsToList(username, enrolledUsers) {
+			diffList = append(diffList, username)
+		}
+	}
+
+	return diffList
+}
+
+/*
+Checks if a string belongs to a list of strings
+
+Params:
+
+- a string that is being searched for
+
+- a list that is searched at
+
+Returns:
+
+- true if string is a list
+
+- otherwise false
+*/
+func belongsToList(lookup string, list []string) bool {
+	for _, val := range list {
+
+		if val == lookup {
+			return true
+		}
+	}
+
+	return false
+}
+
+/*
+Cleanes up by deleting inactive namespaces and  PVs
+
+Params:
+
+- controller Controller - an instance of controller
+*/
+func cleanup(controller Controller) {
+	var awsed AWSed
+	var k8s K8s
+
+	clientSetup(k8s)
+
+	enrolledUsers, err := getEnrollments(awsed)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	activeNamespaces := listNamespace(k8s)
+
+	inactiveNames := diffList(controller, enrolledUsers, activeNamespaces)
+
+	for _, username := range inactiveNames {
+		fmt.Println("Will delete namespace %v", username)
+		deleateNamespace(k8s, username)
+
+		for _, volumeType := range volumes {
+			name := fmt.Sprintf("%v%s", username, volumeType)
+			fmt.Println("Will delete volume %v", name)
+			deletePV(k8s, name)
+		}
+	}
+}
+
+/*
+Lists all namespaces and  PVs that would be cleaned up
+
+Params:
+
+- controller Controller - an instance of controller
+*/
+func drycleanup(controller Controller) {
+	var awsed AWSed
+	var k8s K8s
+
+	clientSetup(k8s)
+
+	enrolledUsers, err := getEnrollments(awsed)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	activeNamespaces := listNamespace(k8s)
+
+	inactiveNames := diffList(controller, enrolledUsers, activeNamespaces)
+
+	for _, username := range inactiveNames {
+		fmt.Println("Will delete namespace %v", username)
+
+		for _, volumeType := range volumes {
+			name := fmt.Sprintf("%v%s", username, volumeType)
+			fmt.Println("Will delete volume %v", name)
+		}
+	}
 }
 
 func main() {
+	var controller Controller
 
+	if len(os.Args) > 0 {
+		arg := os.Args[0]
+
+		if arg == "-dry-run" {
+			drycleanup(controller)
+		} else {
+			fmt.Println("Unknown inline argument")
+		}
+	} else {
+		cleanup(controller)
+	}
 }
