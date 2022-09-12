@@ -69,10 +69,9 @@ func loadConfig(filename string) (Config, error) {
 	return config, err
 }
 
-type AWSInterface interface {
-	getEnrollments()
+type AWSedInterface interface {
+	getEnrollments() ([]string, error)
 }
-
 type AWSed struct {
 }
 
@@ -94,7 +93,7 @@ Returns:
 
 - error
 */
-func getEnrollments(a AWSed) ([]string, error) {
+func (a AWSed) getEnrollments() ([]string, error) {
 	var activeUsersNames []string
 	var activeUsers []ActiveUser
 	reqUrl := config.ApiUrl + "/enrollments?env=dsmlp"
@@ -135,8 +134,32 @@ func getEnrollments(a AWSed) ([]string, error) {
 
 }
 
-// TODO
 type MockAWSed struct {
+}
+
+func (m MockAWSed) getEnrollments() ([]string, error) {
+	var activeUsersNames []string
+	var activeUsers []ActiveUser
+	userFile, err := os.Open("tests/mock_AWS.json")
+
+	if err != nil {
+		return activeUsersNames, err
+	}
+
+	defer userFile.Close()
+
+	responseBytes, err := ioutil.ReadAll(userFile)
+	if err != nil {
+		return activeUsersNames, fmt.Errorf("error reading HTTP response body: %v", err)
+	}
+
+	json.Unmarshal(responseBytes, &activeUsers)
+
+	for _, user := range activeUsers {
+		activeUsersNames = append(activeUsersNames, user.Username)
+	}
+
+	return activeUsersNames, err
 }
 
 type K8sInterface interface {
@@ -148,7 +171,7 @@ type K8sInterface interface {
 }
 
 type K8s struct {
-	clientset *kubernetes.Clientset
+	clientset kubernetes.Interface
 }
 
 /*
@@ -270,7 +293,7 @@ func diffList(controller Controller, enrolledUsers []string, activeNamespaces []
 	var diffList []string
 
 	for _, username := range activeNamespaces {
-		if belongsToList(username, enrolledUsers) {
+		if !belongsToList(username, enrolledUsers) {
 			diffList = append(diffList, username)
 		}
 	}
@@ -311,13 +334,9 @@ Params:
 
 - controller Controller - an instance of controller
 */
-func cleanup(controller Controller) {
-	var awsed AWSed
-	var k8s K8s
+func cleanup(controller Controller, k8s K8s, awsed AWSedInterface) {
 
-	clientSetup(k8s)
-
-	enrolledUsers, err := getEnrollments(awsed)
+	enrolledUsers, err := awsed.getEnrollments()
 
 	if err != nil {
 		log.Fatal(err)
@@ -325,14 +344,15 @@ func cleanup(controller Controller) {
 	activeNamespaces := listNamespace(k8s)
 
 	inactiveNames := diffList(controller, enrolledUsers, activeNamespaces)
+	fmt.Println(inactiveNames)
 
 	for _, username := range inactiveNames {
-		fmt.Println("Will delete namespace %v", username)
+		fmt.Printf("Will delete namespace %v", username)
 		deleateNamespace(k8s, username)
 
 		for _, volumeType := range volumes {
 			name := fmt.Sprintf("%v%s", username, volumeType)
-			fmt.Println("Will delete volume %v", name)
+			fmt.Printf("Will delete volume %v", name)
 			deletePV(k8s, name)
 		}
 	}
@@ -351,7 +371,7 @@ func drycleanup(controller Controller) {
 
 	clientSetup(k8s)
 
-	enrolledUsers, err := getEnrollments(awsed)
+	enrolledUsers, err := awsed.getEnrollments()
 
 	if err != nil {
 		log.Fatal(err)
@@ -361,17 +381,22 @@ func drycleanup(controller Controller) {
 	inactiveNames := diffList(controller, enrolledUsers, activeNamespaces)
 
 	for _, username := range inactiveNames {
-		fmt.Println("Will delete namespace %v", username)
+		notify := fmt.Sprintf("Will delete namespace %v", username)
+		fmt.Println("Will delete volume", notify)
 
 		for _, volumeType := range volumes {
 			name := fmt.Sprintf("%v%s", username, volumeType)
-			fmt.Println("Will delete volume %v", name)
+			fmt.Println("Will delete volume", name)
 		}
 	}
 }
 
 func main() {
 	var controller Controller
+	var awsed AWSed
+
+	var k8s K8s
+	clientSetup(k8s)
 
 	if len(os.Args) > 0 {
 		arg := os.Args[0]
@@ -379,9 +404,9 @@ func main() {
 		if arg == "-dry-run" {
 			drycleanup(controller)
 		} else {
-			fmt.Println("Unknown inline argument")
+			fmt.Println("Unknown argument")
 		}
 	} else {
-		cleanup(controller)
+		cleanup(controller, k8s, awsed)
 	}
 }
