@@ -1,3 +1,12 @@
 {
-    "api_url": "https://awsed.ucsd.edu/api"
+    "api_url": "https://awsed.ucsd.edu/api",
+    "volume_extensions": [
+        "-dsmlp-datasets",
+        "-dsmlp-datasets-nfs",
+        "-home",
+        "-home-nfs",
+        "-nbgrader",
+        "-support",
+        "-teams"
+    ]
 }

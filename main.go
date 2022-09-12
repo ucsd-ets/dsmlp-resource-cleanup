@@ -17,26 +17,11 @@ import (
 // AWSEd API formatted correctly
 var awsedApi = fmt.Sprintf("AWSEd api_key=%v", os.Getenv("AWSED_API_KEY"))
 
-// TODO: check that it's not null in main
 var config, _ = loadConfig("config.json")
 
-var volumes = []string{
-	"-dsmlp-datasets",
-	"-dsmlp-datasets-nfs",
-	"-home",
-	"-home-nfs",
-	"-nbgrader",
-	"-support",
-	"-teams",
-}
-
-// Configurations:
-// awsed API key [x]
-// list of persistent volumes to delete
-// {user}-dsmlp-datasets, {user}-dsmlp-datasets-nfs
-
 type Config struct {
-	ApiUrl string `json:"api_url"`
+	ApiUrl  string   `json:"api_url"`
+	Volumes []string `json: volume_extensions`
 }
 
 /*
@@ -181,21 +166,23 @@ Params:
 
 - k8s K8s - an instance of k8s client
 */
-func clientSetup(k8s K8s) {
+func clientSetup(k8s K8s) error {
 
 	config, err := rest.InClusterConfig()
 
 	if err != nil {
-		fmt.Println(err)
+		return err
 	}
 
 	clientset, err := kubernetes.NewForConfig(config)
 
 	if err != nil {
-		fmt.Println(err)
+		return err
 	}
 
 	k8s.clientset = clientset
+
+	return err
 }
 
 /*
@@ -209,7 +196,7 @@ Returns:
 
 - []string - a list of all active namespaces in cluster
 */
-func listNamespace(k8s K8s) []string {
+func listNamespace(k8s K8s) ([]string, error) {
 
 	var dslmpNamespacelist []string
 
@@ -218,14 +205,14 @@ func listNamespace(k8s K8s) []string {
 		List(context.Background(), v1.ListOptions{})
 
 	if err != nil {
-		fmt.Println(err)
+		return nil, err
 	}
 
 	for _, n := range namspaceList.Items {
 		dslmpNamespacelist = append(dslmpNamespacelist, n.Name)
 	}
 
-	return dslmpNamespacelist
+	return dslmpNamespacelist, err
 }
 
 /*
@@ -237,14 +224,16 @@ Params:
 
 - namespace string - name of a namespace that is deleated
 */
-func deleateNamespace(k8s K8s, namespace string) {
+func deleteNamespace(k8s K8s, namespace string) error {
 	err := k8s.clientset.CoreV1().
 		Namespaces().
 		Delete(context.Background(), namespace, v1.DeleteOptions{})
 
 	if err != nil {
-		fmt.Println(err)
+		return err
 	}
+
+	return nil
 }
 
 /*
@@ -256,21 +245,20 @@ Params:
 
 - namePV string - name of a PV that is deleated
 */
-func deletePV(k8s K8s, namePV string) {
+func deletePV(k8s K8s, namePV string) error {
 	err := k8s.clientset.CoreV1().
 		PersistentVolumes().
 		Delete(context.Background(), namePV, v1.DeleteOptions{})
 
 	if err != nil {
-		fmt.Println(err)
+		return err
 	}
+
+	return nil
 
 }
 
 type MockK8s struct {
-}
-
-type Controller struct {
 }
 
 /*
@@ -288,7 +276,7 @@ Returns:
 
 -[]string -   a list of usernames in k8s that are not in AWSed
 */
-func diffList(controller Controller, enrolledUsers []string, activeNamespaces []string) []string {
+func diffList(enrolledUsers []string, activeNamespaces []string) []string {
 
 	var diffList []string
 
@@ -334,65 +322,49 @@ Params:
 
 - controller Controller - an instance of controller
 */
-func cleanup(controller Controller, k8s K8s, awsed AWSedInterface) {
+func cleanup(k8s K8s, awsed AWSedInterface, dryRun bool) error {
 
 	enrolledUsers, err := awsed.getEnrollments()
 
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
-	activeNamespaces := listNamespace(k8s)
+	activeNamespaces, err := listNamespace(k8s)
 
-	inactiveNames := diffList(controller, enrolledUsers, activeNamespaces)
+	if err != nil {
+		return err
+	}
+
+	inactiveNames := diffList(enrolledUsers, activeNamespaces)
 	fmt.Println(inactiveNames)
 
 	for _, username := range inactiveNames {
 		fmt.Printf("Will delete namespace %v", username)
-		deleateNamespace(k8s, username)
+		if !dryRun {
+			err := deleteNamespace(k8s, username)
 
-		for _, volumeType := range volumes {
+			if err != nil {
+				return err
+			}
+		}
+
+		for _, volumeType := range config.Volumes {
 			name := fmt.Sprintf("%v%s", username, volumeType)
 			fmt.Printf("Will delete volume %v", name)
-			deletePV(k8s, name)
+			if !dryRun {
+				err := deletePV(k8s, name)
+				if err != nil {
+					return err
+				}
+			}
 		}
 	}
-}
 
-/*
-Lists all namespaces and  PVs that would be cleaned up
+	return nil
 
-Params:
-
-- controller Controller - an instance of controller
-*/
-func drycleanup(controller Controller) {
-	var awsed AWSed
-	var k8s K8s
-
-	clientSetup(k8s)
-
-	enrolledUsers, err := awsed.getEnrollments()
-
-	if err != nil {
-		log.Fatal(err)
-	}
-	activeNamespaces := listNamespace(k8s)
-
-	inactiveNames := diffList(controller, enrolledUsers, activeNamespaces)
-
-	for _, username := range inactiveNames {
-		notify := fmt.Sprintf("Will delete namespace %v", username)
-		fmt.Println("Will delete volume", notify)
-
-		for _, volumeType := range volumes {
-			name := fmt.Sprintf("%v%s", username, volumeType)
-			fmt.Println("Will delete volume", name)
-		}
-	}
 }
 
 func main() {
-	var controller Controller
 	var awsed AWSed
 
 	var k8s K8s
@@ -402,11 +374,18 @@ func main() {
 		arg := os.Args[0]
 
 		if arg == "-dry-run" {
-			drycleanup(controller)
+			err := cleanup(k8s, awsed, true)
+			if err != nil {
+				log.Fatal(err)
+			}
 		} else {
 			fmt.Println("Unknown argument")
 		}
 	} else {
-		cleanup(controller, k8s, awsed)
+		err := cleanup(k8s, awsed, false)
+
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 }

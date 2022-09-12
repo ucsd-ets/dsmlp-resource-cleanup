@@ -39,7 +39,7 @@ func setupTest() {
 
 		clientset.CoreV1().Namespaces().Create(context.Background(), namespace, v1.CreateOptions{})
 		// creates volumes according to the volume type
-		for _, volumeType := range volumes {
+		for _, volumeType := range config.Volumes {
 			name := fmt.Sprintf("%v%s", username, volumeType)
 
 			pv := &corev1.PersistentVolume{
@@ -60,7 +60,7 @@ func setupTest() {
 	}
 	clientset.CoreV1().Namespaces().Create(context.Background(), namespace, v1.CreateOptions{})
 
-	for _, volumeType := range volumes {
+	for _, volumeType := range config.Volumes {
 		name := fmt.Sprintf("%v%s", "dvader", volumeType)
 
 		pv := &corev1.PersistentVolume{
@@ -81,15 +81,19 @@ func TestMain(m *testing.M) {
 }
 
 func TestDiffList(t *testing.T) {
-	var controller Controller
-	namespaces := listNamespace(mockK8s)
+	namespaces, err := listNamespace(mockK8s)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	enrolledStd, err := mockAWS.getEnrollments()
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	diffList := diffList(controller, enrolledStd, namespaces)
+	diffList := diffList(enrolledStd, namespaces)
 
 	expected := []string{"dvader"}
 
@@ -102,11 +106,15 @@ func TestDiffList(t *testing.T) {
 }
 
 func TestCleanup(t *testing.T) {
-	var controller Controller
 
-	cleanup(controller, mockK8s, mockAWS)
+	cleanup(mockK8s, mockAWS, true)
 
-	namespaces := listNamespace(mockK8s)
+	namespaces, err := listNamespace(mockK8s)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	enrolledStd, err := mockAWS.getEnrollments()
 
 	if err != nil {
