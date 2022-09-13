@@ -30,7 +30,7 @@ jobs:
       with:
         images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
         tags: |
-          type=raw,value=cleanup-image:$(date +%s)
+          type=raw,value=${{env.NOW}}
         
     - name: Build the Docker image
       uses: docker/build-push-action@ac9327eae2b366085ac7f6a2d02df8aa8ead720a
