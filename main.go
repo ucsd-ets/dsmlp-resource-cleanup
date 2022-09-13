@@ -21,7 +21,7 @@ var config, _ = loadConfig("config.json")
 
 type Config struct {
 	ApiUrl  string   `json:"api_url"`
-	Volumes []string `json: volume_extensions`
+	Volumes []string `json:"volume_extensions"`
 }
 
 /*
@@ -81,7 +81,7 @@ Returns:
 func (a AWSed) getEnrollments() ([]string, error) {
 	var activeUsersNames []string
 	var activeUsers []ActiveUser
-	reqUrl := config.ApiUrl + "/enrollments?env=dsmlp"
+	reqUrl := config.ApiUrl
 
 	// Create a template for a standard GET request for all active enrolled users,
 	// that use dsmlp
@@ -93,7 +93,7 @@ func (a AWSed) getEnrollments() ([]string, error) {
 
 	// Will never pop up, but compiler requires it to handle this err
 	if err != nil {
-		return activeUsersNames, err
+		return activeUsersNames, fmt.Errorf("error reading HTTP response body: %v", err)
 	}
 
 	// Add API key for header
@@ -149,7 +149,7 @@ func (m MockAWSed) getEnrollments() ([]string, error) {
 
 type K8sInterface interface {
 	clientSetup()
-	listNamespace()
+	listNamespaces()
 	deleateNamespace(namespace string)
 	deletePV(namespace string)
 	listDeleatedPV()
@@ -196,7 +196,7 @@ Returns:
 
 - []string - a list of all active namespaces in cluster
 */
-func listNamespace(k8s K8s) ([]string, error) {
+func listNamespaces(k8s K8s) ([]string, error) {
 
 	var dslmpNamespacelist []string
 
@@ -256,9 +256,6 @@ func deletePV(k8s K8s, namePV string) error {
 
 	return nil
 
-}
-
-type MockK8s struct {
 }
 
 /*
@@ -329,7 +326,7 @@ func cleanup(k8s K8s, awsed AWSedInterface, dryRun bool) error {
 	if err != nil {
 		return err
 	}
-	activeNamespaces, err := listNamespace(k8s)
+	activeNamespaces, err := listNamespaces(k8s)
 
 	if err != nil {
 		return err
@@ -339,7 +336,7 @@ func cleanup(k8s K8s, awsed AWSedInterface, dryRun bool) error {
 	fmt.Println(inactiveNames)
 
 	for _, username := range inactiveNames {
-		fmt.Printf("Will delete namespace %v", username)
+		fmt.Println("Will delete namespace", username)
 		if !dryRun {
 			err := deleteNamespace(k8s, username)
 
@@ -347,10 +344,10 @@ func cleanup(k8s K8s, awsed AWSedInterface, dryRun bool) error {
 				return err
 			}
 		}
-
 		for _, volumeType := range config.Volumes {
+
 			name := fmt.Sprintf("%v%s", username, volumeType)
-			fmt.Printf("Will delete volume %v", name)
+			fmt.Println("Will delete volume", name)
 			if !dryRun {
 				err := deletePV(k8s, name)
 				if err != nil {
@@ -365,9 +362,10 @@ func cleanup(k8s K8s, awsed AWSedInterface, dryRun bool) error {
 }
 
 func main() {
-	var awsed AWSed
 
 	var k8s K8s
+	var awsed AWSed
+
 	clientSetup(k8s)
 
 	if len(os.Args) > 0 {
