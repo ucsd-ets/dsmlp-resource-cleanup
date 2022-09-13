@@ -27,4 +27,4 @@ jobs:
       with:
         push: true
         file: .devcontainer/Dockerfile 
-        tag: cleanup-image:$(date +%s)
+        tags: cleanup-image:$(date +%s)
