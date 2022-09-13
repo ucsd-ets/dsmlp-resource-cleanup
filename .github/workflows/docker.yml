@@ -23,7 +23,7 @@ jobs:
       uses: docker/setup-buildx-action@79abd3f86f79a9d68a23c75a09a9a85889262adf
       with: 
         tags: |
-          type=raw,value=${{env.NOW}}
+          type=raw,value=foo
       
       # Extract metadata (tags, labels) for Docker
       # https://github.com/docker/metadata-action
@@ -33,7 +33,7 @@ jobs:
       with:
         images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
         tags: |
-          type=raw,value=${{env.NOW}}
+          type=raw,value=poo
         
     - name: Build the Docker image
       uses: docker/build-push-action@ac9327eae2b366085ac7f6a2d02df8aa8ead720a
