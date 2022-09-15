@@ -72,6 +72,9 @@ func TestMain(m *testing.M) {
 }
 
 func TestDiffList(t *testing.T) {
+
+	log.Println("TestDiffList running")
+
 	namespaces, err := listNamespaces(mockK8s)
 
 	if err != nil {
@@ -94,9 +97,12 @@ func TestDiffList(t *testing.T) {
 		fmt.Println(diffList)
 		fmt.Println(expected)
 	}
+	log.Println("TestDiffList Ok")
 }
 
 func TestListNamespaces(t *testing.T) {
+	log.Println("TestListNamespaces running")
+
 	expected := []string{"asavarapu", "dvader", "aanil", "rhecuba", "n2nazar", "mkay"}
 	got, err := listNamespaces(mockK8s)
 
@@ -113,9 +119,14 @@ func TestListNamespaces(t *testing.T) {
 		fmt.Println("Got", got)
 	}
 
+	log.Println("TestListNamespaces Ok")
+
 }
 
 func TestDeleteNamespace(t *testing.T) {
+
+	log.Println("TestDeleteNamespace running")
+
 	expected := []string{"asavarapu", "aanil", "rhecuba", "n2nazar", "mkay"}
 	deleteNamespace(mockK8s, "dvader")
 
@@ -133,9 +144,13 @@ func TestDeleteNamespace(t *testing.T) {
 		fmt.Println("Expected", expected)
 		fmt.Println("Got", got)
 	}
+
+	log.Println("TestDeleteNamespace Ok")
 }
 
 func TestDeletePV(t *testing.T) {
+
+	log.Println("TestDeletePV running")
 
 	expected := []string{"asavarapu", "aanil", "rhecuba", "n2nazar", "mkay"}
 
@@ -164,9 +179,13 @@ func TestDeletePV(t *testing.T) {
 		fmt.Println("Expected", expected)
 		fmt.Println("Got", got)
 	}
+
+	log.Println("TestDeletePV Ok")
 }
 
 func TestCleanup(t *testing.T) {
+
+	log.Println("TestCleanup running")
 
 	cleanup(mockK8s, mockAWS, false)
 
@@ -191,22 +210,5 @@ func TestCleanup(t *testing.T) {
 		fmt.Println(enrolledStd)
 	}
 
-}
-
-// ! Test doesn't work
-func TestGetEnrollments(t *testing.T) {
-	var awsed AWSed
-
-	enrolledStd, err := awsed.getEnrollments()
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println(awsed.getEnrollments())
-	fmt.Println(enrolledStd)
-
-	if len(enrolledStd) == 0 {
-		t.Errorf("Student list is empty. Possible API faliure")
-	}
+	log.Println("TestCleanup Ok")
 }

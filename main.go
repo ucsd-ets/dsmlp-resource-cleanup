@@ -333,10 +333,9 @@ func cleanup(k8s K8s, awsed AWSedInterface, dryRun bool) error {
 	}
 
 	inactiveNames := diffList(enrolledUsers, activeNamespaces)
-	fmt.Println(inactiveNames)
 
 	for _, username := range inactiveNames {
-		fmt.Println("Will delete namespace", username)
+		log.Println("Will delete namespace", username)
 		if !dryRun {
 			err := deleteNamespace(k8s, username)
 
@@ -347,7 +346,7 @@ func cleanup(k8s K8s, awsed AWSedInterface, dryRun bool) error {
 		for _, volumeType := range config.Volumes {
 
 			name := fmt.Sprintf("%v%s", username, volumeType)
-			fmt.Println("Will delete volume", name)
+			log.Println("Will delete volume", name)
 			if !dryRun {
 				err := deletePV(k8s, name)
 				if err != nil {
@@ -366,18 +365,16 @@ func main() {
 	var k8s K8s
 	var awsed AWSed
 
-	clientSetup(k8s)
+	if len(os.Args) > 1 {
+		arg := os.Args[1]
 
-	if len(os.Args) > 0 {
-		arg := os.Args[0]
-
-		if arg == "-dry-run" {
+		if arg == "--dry-run" {
 			err := cleanup(k8s, awsed, true)
 			if err != nil {
 				log.Fatal(err)
 			}
 		} else {
-			fmt.Println("Unknown argument")
+			log.Println("Unknown argument")
 		}
 	} else {
 		err := cleanup(k8s, awsed, false)

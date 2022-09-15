@@ -1,0 +1,45 @@
+apiVersion: batch/v1
+
+kind: CronJob
+metadata:
+  name: dsmlp-cleanup-job
+spec:
+  schedule: "* * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: dsmlp-cleanup-container
+              image: dsmlp-cleanup
+              command: ['go', 'run', 'main.go']
+          restartPolicy: OnFailure
+
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: dsmlp-cleanup-binding
+subjects:
+- kind: User
+  name: dsmlp-cleanup-job
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: dsmlp-cleanup-role 
+  apiGroup: rbac.authorization.k8s.io
+
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: dsmlp-cleanup-role
+rules:
+- apiGroups: [""]
+  resources: ["namespace", "pv", "pvc"]
+  verbs: ["get", "watch", "list", "delete"]
+
