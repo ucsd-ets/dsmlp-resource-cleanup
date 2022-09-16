@@ -4,17 +4,53 @@ kind: CronJob
 metadata:
   name: dsmlp-cleanup-job
 spec:
-  schedule: "* * * * *"
+  schedule: "1 1 * * *"
   jobTemplate:
     spec:
       template:
         spec:
+          serviceAccountName: default
+          automountServiceAccountToken: true 
           containers:
             - name: dsmlp-cleanup-container
-              image: dsmlp-cleanup
-              command: ['go', 'run', 'main.go']
+              image: ghcr.io/ucsd-ets/dsmlp-resource-cleanup:test
+              stdin: true
+              tty: true
+              #command: ['go', 'run', 'main.go', '--dry-run']
+              volumeMounts:
+              - name: dsmlp-cleanup-job
+                mountPath: /workspaces/config.json
+                subPath: config.json
           restartPolicy: OnFailure
+          volumes:
+          - name: dsmlp-cleanup-job
+            configMap:
+              name: dsmlp-cleanup-job
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: dsmlp-cleanup-job
+data:
+  config.json: |
+    {
+        "api_url": "https://awsed.ucsd.edu/api/enrollments?env=dsmlp",
+        "volume_extensions": [
+            "-dsmlp-datasets",
+            "-dsmlp-datasets-nfs",
+            "-home",
+            "-home-nfs",
+            "-nbgrader",
+            "-support",
+            "-teams"
+        ]
+    }
+---
 
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: dsmlp-cleanup-job
 
 ---
 
@@ -26,6 +62,9 @@ subjects:
 - kind: User
   name: dsmlp-cleanup-job
   apiGroup: rbac.authorization.k8s.io
+- kind: ServiceAccount
+  name: dsmlp-cleanup-job
+  namespace: default
 roleRef:
   kind: ClusterRole
   name: dsmlp-cleanup-role 
