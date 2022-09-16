@@ -80,5 +80,5 @@ metadata:
 rules:
 - apiGroups: [""]
   resources: ["namespace", "pv", "pvc"]
-  verbs: ["get", "watch", "list", "delete"]
+  verbs: ["get", "list", "delete"]
 
