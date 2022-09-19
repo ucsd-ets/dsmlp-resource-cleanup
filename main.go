@@ -20,8 +20,9 @@ var awsedApi = fmt.Sprintf("AWSEd api_key=%v", os.Getenv("AWSED_API_KEY"))
 var config, _ = loadConfig("config.json")
 
 type Config struct {
-	ApiUrl  string   `json:"api_url"`
-	Volumes []string `json:"volume_extensions"`
+	ActiveUsers string   `json:"active_users_url"`
+	AllUsers    string   `json:"all_users_url"`
+	Volumes     []string `json:"volume_extensions"`
 }
 
 /*
@@ -55,13 +56,13 @@ func loadConfig(filename string) (Config, error) {
 }
 
 type AWSedInterface interface {
-	getEnrollments() ([]string, error)
+	getActiveUsers() ([]string, error)
 }
 type AWSed struct {
 }
 
 // We just use usernames, since we don't need Uids or first names
-type ActiveUser struct {
+type AWSUser struct {
 	Username string `json:"username`
 }
 
@@ -78,10 +79,10 @@ Returns:
 
 - error
 */
-func (a AWSed) getEnrollments() ([]string, error) {
-	var activeUsersNames []string
-	var activeUsers []ActiveUser
-	reqUrl := config.ApiUrl
+func (a AWSed) getActiveUsers() ([]string, error) {
+	var activeUserNames []string
+	var activeUsers []AWSUser
+	reqUrl := config.ActiveUsers
 
 	// Create a template for a standard GET request for all active enrolled users,
 	// that use dsmlp
@@ -93,7 +94,7 @@ func (a AWSed) getEnrollments() ([]string, error) {
 
 	// Will never pop up, but compiler requires it to handle this err
 	if err != nil {
-		return activeUsersNames, fmt.Errorf("error reading HTTP response body: %v", err)
+		return activeUserNames, fmt.Errorf("error reading HTTP response body: %v", err)
 	}
 
 	// Add API key for header
@@ -101,22 +102,62 @@ func (a AWSed) getEnrollments() ([]string, error) {
 
 	response, err := http.DefaultClient.Do(request)
 	if err != nil {
-		return activeUsersNames, fmt.Errorf("error reading HTTP response body: %v", err)
+		return activeUserNames, fmt.Errorf("error reading HTTP response body: %v", err)
 	}
 
 	responseBytes, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		return activeUsersNames, fmt.Errorf("error reading HTTP response body: %v", err)
+		return activeUserNames, fmt.Errorf("error reading HTTP response body: %v", err)
 	}
 
 	json.Unmarshal(responseBytes, &activeUsers)
 
 	for _, user := range activeUsers {
-		activeUsersNames = append(activeUsersNames, user.Username)
+		activeUserNames = append(activeUserNames, user.Username)
 	}
 
-	return activeUsersNames, err
+	return activeUserNames, err
 
+}
+
+func (a AWSed) getAllUsers() ([]string, error) {
+	var allUserNames []string
+	var activeUsers []AWSUser
+	reqUrl := config.AllUsers
+
+	// Create a template for a standard GET request for all active enrolled users,
+	// that use dsmlp
+	request, err := http.NewRequest(
+		http.MethodGet,
+		reqUrl,
+		nil,
+	)
+
+	// Will never pop up, but compiler requires it to handle this err
+	if err != nil {
+		return allUserNames, fmt.Errorf("error reading HTTP response body: %v", err)
+	}
+
+	// Add API key for header
+	request.Header.Add("Authorization", awsedApi)
+
+	response, err := http.DefaultClient.Do(request)
+	if err != nil {
+		return allUserNames, fmt.Errorf("error reading HTTP response body: %v", err)
+	}
+
+	responseBytes, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return allUserNames, fmt.Errorf("error reading HTTP response body: %v", err)
+	}
+
+	json.Unmarshal(responseBytes, &activeUsers)
+
+	for _, user := range activeUsers {
+		allUserNames = append(allUserNames, user.Username)
+	}
+
+	return allUserNames, err
 }
 
 type MockAWSed struct {
@@ -124,7 +165,7 @@ type MockAWSed struct {
 
 func (m MockAWSed) getEnrollments() ([]string, error) {
 	var activeUsersNames []string
-	var activeUsers []ActiveUser
+	var activeUsers []AWSUser
 	userFile, err := os.Open("tests/mock_AWS.json")
 
 	if err != nil {
@@ -317,20 +358,9 @@ Params:
 
 - controller Controller - an instance of controller
 */
-func cleanup(k8s K8s, awsed AWSedInterface, dryRun bool) error {
+func cleanup(k8s K8s, activeUsers []string, allUsers []string, dryRun bool) error {
 
-	enrolledUsers, err := awsed.getEnrollments()
-
-	if err != nil {
-		return err
-	}
-	activeNamespaces, err := listNamespaces(k8s)
-
-	if err != nil {
-		return err
-	}
-
-	inactiveNames := diffList(enrolledUsers, activeNamespaces)
+	inactiveNames := diffList(activeUsers, allUsers)
 
 	for _, username := range inactiveNames {
 		log.Println("Will delete namespace", username)
@@ -363,6 +393,18 @@ func main() {
 	var k8s K8s
 	var awsed AWSed
 
+	activeUsers, err := awsed.getActiveUsers()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	allUsers, err := awsed.getAllUsers()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	clientset, err := clientSetup(k8s)
 
 	if err != nil {
@@ -375,7 +417,7 @@ func main() {
 		arg := os.Args[1]
 
 		if arg == "--dry-run" {
-			err := cleanup(k8s, awsed, true)
+			err := cleanup(k8s, activeUsers, allUsers, true)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -383,7 +425,7 @@ func main() {
 			log.Println("Unknown argument")
 		}
 	} else {
-		err := cleanup(k8s, awsed, false)
+		err := cleanup(k8s, activeUsers, allUsers, false)
 
 		if err != nil {
 			log.Fatal(err)

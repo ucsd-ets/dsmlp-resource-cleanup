@@ -183,32 +183,32 @@ func TestDeletePV(t *testing.T) {
 	log.Println("TestDeletePV Ok")
 }
 
-func TestCleanup(t *testing.T) {
+// func TestCleanup(t *testing.T) {
 
-	log.Println("TestCleanup running")
+// 	log.Println("TestCleanup running")
 
-	cleanup(mockK8s, mockAWS, false)
+// 	cleanup(mockK8s, mockAWS, false)
 
-	namespaces, err := listNamespaces(mockK8s)
+// 	namespaces, err := listNamespaces(mockK8s)
 
-	if err != nil {
-		log.Fatal(err)
-	}
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
 
-	enrolledStd, err := mockAWS.getEnrollments()
+// 	enrolledStd, err := mockAWS.getEnrollments()
 
-	if err != nil {
-		log.Fatal(err)
-	}
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
 
-	sort.Strings(enrolledStd)
+// 	sort.Strings(enrolledStd)
 
-	if !reflect.DeepEqual(namespaces, enrolledStd) {
-		t.Errorf("lists don't match")
+// 	if !reflect.DeepEqual(namespaces, enrolledStd) {
+// 		t.Errorf("lists don't match")
 
-		fmt.Println(namespaces)
-		fmt.Println(enrolledStd)
-	}
+// 		fmt.Println(namespaces)
+// 		fmt.Println(enrolledStd)
+// 	}
 
-	log.Println("TestCleanup Ok")
-}
+// 	log.Println("TestCleanup Ok")
+// }
