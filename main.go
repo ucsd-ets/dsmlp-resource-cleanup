@@ -166,23 +166,21 @@ Params:
 
 - k8s K8s - an instance of k8s client
 */
-func clientSetup(k8s K8s) error {
+func clientSetup(k8s K8s) (kubernetes.Interface, error) {
 
 	config, err := rest.InClusterConfig()
 
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	clientset, err := kubernetes.NewForConfig(config)
 
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	k8s.clientset = clientset
-
-	return err
+	return clientset, err
 }
 
 /*
@@ -364,6 +362,14 @@ func main() {
 
 	var k8s K8s
 	var awsed AWSed
+
+	clientset, err := clientSetup(k8s)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	k8s.clientset = clientset
 
 	if len(os.Args) > 1 {
 		arg := os.Args[1]
