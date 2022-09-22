@@ -21,7 +21,7 @@ var config, _ = loadConfig("config.json")
 
 type Config struct {
 	ActiveUsers string   `json:"active_users_url"`
-	AllUsers    string   `json:"all_users_url"`
+	UserUrl     string   `json:"user_url"`
 	Volumes     []string `json:"volume_extensions"`
 }
 
@@ -120,44 +120,25 @@ func (a AWSed) getActiveUsers() ([]string, error) {
 
 }
 
-func (a AWSed) getAllUsers() ([]string, error) {
-	var allUserNames []string
-	var activeUsers []AWSUser
-	reqUrl := config.AllUsers
+func getUserDetail(name string) (int, error) {
 
-	// Create a template for a standard GET request for all active enrolled users,
-	// that use dsmlp
+	reqUrl := config.UserUrl
 	request, err := http.NewRequest(
 		http.MethodGet,
 		reqUrl,
 		nil,
 	)
 
-	// Will never pop up, but compiler requires it to handle this err
 	if err != nil {
-		return allUserNames, fmt.Errorf("error reading HTTP response body: %v", err)
+		return -1, err
 	}
 
 	// Add API key for header
 	request.Header.Add("Authorization", awsedApi)
 
-	response, err := http.DefaultClient.Do(request)
-	if err != nil {
-		return allUserNames, fmt.Errorf("error reading HTTP response body: %v", err)
-	}
+	check, err := http.DefaultClient.Do(request)
 
-	responseBytes, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		return allUserNames, fmt.Errorf("error reading HTTP response body: %v", err)
-	}
-
-	json.Unmarshal(responseBytes, &activeUsers)
-
-	for _, user := range activeUsers {
-		allUserNames = append(allUserNames, user.Username)
-	}
-
-	return allUserNames, err
+	return check.StatusCode, err
 }
 
 type MockAWSed struct {
@@ -358,12 +339,30 @@ Params:
 
 - controller Controller - an instance of controller
 */
-func cleanup(k8s K8s, activeUsers []string, allUsers []string, dryRun bool) error {
+func cleanup(k8s K8s, activeUsers []string, awsed AWSedInterface, dryRun bool) error {
 
-	inactiveNames := diffList(activeUsers, allUsers)
+	k8sNames, err := listNamespaces(k8s)
 
-	for _, username := range inactiveNames {
+	if err != nil {
+		return err
+	}
+
+	for _, username := range k8sNames {
+		response, err := getUserDetail(username)
+
+		// Error occures only when the request can't be made
+		if err != nil {
+			return err
+		}
+
+		if response >= 300 {
+			continue
+		} else if belongsToList(username, activeUsers) {
+			continue
+		}
+
 		log.Println("Will delete namespace", username)
+
 		if !dryRun {
 			err := deleteNamespace(k8s, username)
 
@@ -399,12 +398,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	allUsers, err := awsed.getAllUsers()
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	clientset, err := clientSetup(k8s)
 
 	if err != nil {
@@ -417,7 +410,7 @@ func main() {
 		arg := os.Args[1]
 
 		if arg == "--dry-run" {
-			err := cleanup(k8s, activeUsers, allUsers, true)
+			err := cleanup(k8s, activeUsers, awsed, true)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -425,7 +418,7 @@ func main() {
 			log.Println("Unknown argument")
 		}
 	} else {
-		err := cleanup(k8s, activeUsers, allUsers, false)
+		err := cleanup(k8s, activeUsers, awsed, false)
 
 		if err != nil {
 			log.Fatal(err)
