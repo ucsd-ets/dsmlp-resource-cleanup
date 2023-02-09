@@ -74,7 +74,7 @@ type AWSUser struct {
 	Username string `json:"username"`
 }
 
-/**
+/*
 For a given name, makes a get call to https://awsed.ucsd.edu/api/users,
 if no awsed record exists or a user is enrolled somewhere, returns true,
 otherwise - false
@@ -133,11 +133,34 @@ func (a AWSed) getUserEnrollment(name string) (bool, error) {
 }
 
 type MockAWSed struct {
+	AWSRepo []AWSedResponse
 }
 
-// TODO: do mocking out
+/*
+Mocks out the enrollment logic with a call to struct var AWSRepo
+
+Params:
+
+* name string - a name of user
+
+Returns:
+
+* bool - weather a user is to be deleted
+
+* err
+*/
 func (m MockAWSed) getUserEnrollment(name string) (bool, error) {
-	return true, nil
+
+	for _, response := range m.AWSRepo {
+		if response.Username == name {
+			if len(response.Enrollments) > 0 {
+				return false, nil
+			} else {
+				return true, nil
+			}
+		}
+	}
+	return false, nil
 }
 
 type K8sInterface interface {
