@@ -2,66 +2,26 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"reflect"
 	"sort"
 	"testing"
 
-	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	testclient "k8s.io/client-go/kubernetes/fake"
 )
 
 var mockK8s K8s
 var mockAWS MockAWSed
 
+// TODO: do setup
 func setupTest() {
-	mockK8s.clientset = testclient.NewSimpleClientset()
+	//mockK8s.clientset = testclient.NewSimpleClientset()
 	log.Println("setup suite")
 
-	clientset := mockK8s.clientset
-
-	usernames, err := mockAWS.getEnrollments()
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// loop that creates namespaces and PVs from mock_AWS.json
-	for _, username := range usernames {
-		namespace := &corev1.Namespace{
-			ObjectMeta: v1.ObjectMeta{
-				Name: username,
-			},
-		}
-
-		clientset.CoreV1().Namespaces().Create(context.Background(), namespace, v1.CreateOptions{})
-		// creates volumes according to the volume type
-		pv := &corev1.PersistentVolume{
-			ObjectMeta: v1.ObjectMeta{
-				Name: username,
-			}}
-
-		clientset.CoreV1().PersistentVolumes().Create(context.Background(), pv, v1.CreateOptions{})
-
-	}
-
-	// creates a namespaces and associated PVs that are not in AWSed roster
-	namespace := &corev1.Namespace{
-		ObjectMeta: v1.ObjectMeta{
-			Name: "dvader",
-		},
-	}
-	clientset.CoreV1().Namespaces().Create(context.Background(), namespace, v1.CreateOptions{})
-
-	pv := &corev1.PersistentVolume{
-		ObjectMeta: v1.ObjectMeta{
-			Name: "dvader",
-		}}
-
-	clientset.CoreV1().PersistentVolumes().Create(context.Background(), pv, v1.CreateOptions{})
 }
 
 func TestMain(m *testing.M) {
@@ -71,33 +31,9 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func TestDiffList(t *testing.T) {
+// TODO: do enrollments
+func getUserEnrollment(t *testing.T) {
 
-	log.Println("TestDiffList running")
-
-	namespaces, err := listNamespaces(mockK8s)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	enrolledStd, err := mockAWS.getEnrollments()
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	diffList := diffList(enrolledStd, namespaces)
-
-	expected := []string{"dvader"}
-
-	if !reflect.DeepEqual(diffList, expected) {
-		t.Errorf("lists don't match")
-
-		fmt.Println(diffList)
-		fmt.Println(expected)
-	}
-	log.Println("TestDiffList Ok")
 }
 
 func TestListNamespaces(t *testing.T) {
@@ -183,32 +119,60 @@ func TestDeletePV(t *testing.T) {
 	log.Println("TestDeletePV Ok")
 }
 
-// func TestCleanup(t *testing.T) {
+func TestGetAwsJson(t *testing.T) {
+	log.Println()
+	log.Println("Test Get Aws JSON mock function")
 
-// 	log.Println("TestCleanup running")
+	awsRepo, err := getAwsJson()
 
-// 	cleanup(mockK8s, mockAWS, false)
+	if err != nil {
+		return
+	}
 
-// 	namespaces, err := listNamespaces(mockK8s)
+	var expectedEnrollments []string
+	expectedEnrollments = append(expectedEnrollments, "MUS206_WI23_D00")
 
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
+	expected := AWSRecord{Username: "btice", FirstName: "brian", LastName: "tice", Uid: 130507, Enrollments: expectedEnrollments}
 
-// 	enrolledStd, err := mockAWS.getEnrollments()
+	got := awsRepo[0]
 
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
+	if !reflect.DeepEqual(expected, got) {
+		t.Errorf("lists don't match")
 
-// 	sort.Strings(enrolledStd)
+		fmt.Println("Expected", expected)
+		fmt.Println("Got", got)
+	}
 
-// 	if !reflect.DeepEqual(namespaces, enrolledStd) {
-// 		t.Errorf("lists don't match")
+	log.Print("Ok")
+	log.Println()
+}
 
-// 		fmt.Println(namespaces)
-// 		fmt.Println(enrolledStd)
-// 	}
+type AWSRecord struct {
+	Username    string   `json:"username"`
+	FirstName   string   `json:"firstName"`
+	LastName    string   `json:"lastName"`
+	Uid         int      `json:"uid"`
+	Enrollments []string `json:"enrollments"`
+}
 
-// 	log.Println("TestCleanup Ok")
-// }
+func getAwsJson() ([]AWSRecord, error) {
+	var awsRepo []AWSRecord
+
+	userFile, err := os.Open("tests/mock_AWS.json")
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer userFile.Close()
+
+	responseBytes, err := ioutil.ReadAll(userFile)
+
+	if err != nil {
+		return nil, err
+	}
+
+	json.Unmarshal(responseBytes, &awsRepo)
+
+	return awsRepo, nil
+}

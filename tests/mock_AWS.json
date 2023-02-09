@@ -1,35 +1,43 @@
 [{
-    "username": "asavarapu",
-    "firstName": "Sri",
-    "lastName": "Savarapu",
-    "uid": 128206,
-    "token": null
+  "username": "btice",
+  "firstName": "brian",
+  "lastName": "tice",
+  "uid": 130507,
+  "enrollments": [
+    "MUS206_WI23_D00"
+  ]
 },
 {
-    "username": "aanil",
-    "firstName": "aodh",
-    "lastName": "anil",
-    "uid": 5406,
-    "token": null
+  "username": "pbotros",
+  "firstName": "Paul",
+  "lastName": "Botros",
+  "uid": 1177806,
+  "enrollments": [
+  ]
 },
 {
-    "username": "rhecuba",
-    "firstName": "romana",
-    "lastName": "hecuba",
-    "uid": 5595,
-    "token": null
+  "username": "pbotros",
+  "firstName": "Paul",
+  "lastName": "Botros",
+  "uid": 1177806,
+  "enrollments": [
+    "RITS_RESEARCHER"
+  ]
 },
 {
     "username": "n2nazar",
     "firstName": "narcisa",
     "lastName": "nazar",
     "uid": 91782,
-    "token": null
+    "enrollments": [
+    ]
 },
 {
-    "username": "mkay",
-    "firstName": "mecit",
-    "lastName": "kay",
-    "uid": 104856,
-    "token": null
+  "username": "tix034",
+  "firstName": "tianyao",
+  "lastName": "xu",
+  "uid": 19276,
+  "enrollments": [
+    "CMM262_WI23_A00"
+  ]
 }]
