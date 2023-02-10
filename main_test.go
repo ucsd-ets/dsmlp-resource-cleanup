@@ -177,9 +177,9 @@ func TestDeletePV(t *testing.T) {
 
 	log.Println("TestDeletePV running")
 
-	expected := []string{"asavarapu", "aanil", "rhecuba", "n2nazar", "mkay"}
+	expected := []string{"btice", "dvader", "pbotros", "tix034"}
 
-	deletePV(mockK8s, "dvader")
+	deletePV(mockK8s, "n2nazar")
 
 	var got []string
 
@@ -206,6 +206,34 @@ func TestDeletePV(t *testing.T) {
 	}
 
 	log.Println("TestDeletePV Ok")
+}
+
+func TestCleanup(t *testing.T) {
+	log.Println("TestCleanup running")
+	expected := []string{"btice", "dvader", "tix034"}
+	err := cleanup(mockK8s, mockAWS, false)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	got, err := listNamespaces(mockK8s)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	sort.Strings(expected)
+	sort.Strings(got)
+
+	if !reflect.DeepEqual(expected, got) {
+		t.Errorf("lists don't match")
+
+		fmt.Println("Expected", expected)
+		fmt.Println("Got", got)
+	}
+
+	log.Println("TestCleanup Ok")
 }
 
 /* Test JSON reader */

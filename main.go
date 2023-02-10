@@ -269,6 +269,31 @@ func deletePV(k8s K8s, namePV string) error {
 	}
 
 	return nil
+}
+
+/*
+Checks if PV is present in k8s clientset
+
+Params:
+
+- k8s K8s - an instance of k8s client
+
+- namePV string - name of a PV that is deleated
+
+Returns:
+
+- boolean value representing weather PV exists or not
+*/
+func isPvPresent(k8s K8s, namePV string) bool {
+	val, err := k8s.clientset.CoreV1().
+		PersistentVolumes().
+		Get(context.Background(), namePV, v1.GetOptions{})
+
+	if err != nil {
+		return false
+	}
+
+	return val != nil
 
 }
 
@@ -314,12 +339,21 @@ func cleanup(k8s K8s, awsed AWSedInterface, dryRun bool) error {
 			name := fmt.Sprintf("%v%s", username, volumeType)
 			log.Println("Will delete volume", name)
 			if !dryRun {
-				err := deletePV(k8s, name)
-				if err != nil {
-					return err
+				if isPvPresent(k8s, name) {
+
+					err := deletePV(k8s, name)
+
+					if err != nil {
+						return err
+					}
+				} else {
+					log.Println(name, " doesn't exist. Skipping")
 				}
 			}
 		}
+
+		log.Println("")
+
 	}
 
 	return nil
