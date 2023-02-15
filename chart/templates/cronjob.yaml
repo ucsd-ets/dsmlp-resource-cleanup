@@ -1,0 +1,30 @@
+{{- if .Values.cronjob.enabled }}
+  apiVersion: batch/v1
+  kind: CronJob
+  metadata:
+    name: {{ .Release.Name }}-cronjob
+  spec:
+    schedule: {{ .Values.syncSchedule }}
+    jobTemplate:
+      spec:
+        template:
+          spec:
+            serviceAccountName: default
+            automountServiceAccountToken: true 
+            containers:
+              - name: {{ .Chart.Name }}
+                image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+                stdin: true
+                tty: true
+                #command: ['go', 'run', 'main.go', '--dry-run']
+                volumeMounts:
+                - name: dsmlp-cleanup-job
+                  mountPath: /workspaces/config.json
+                  subPath: config.json
+            restartPolicy: OnFailure
+            volumes:
+            - name: {{ .Chart.Name }}
+              configMap:
+                name: {{ .Chart.Name }}
+{{ toYaml .Values.resources | indent 16 }}
+{{- end }}

@@ -76,18 +76,18 @@ type AWSUser struct {
 
 /*
 For a given name, makes a get call to https://awsed.ucsd.edu/api/users,
-if no awsed record exists or a user is enrolled somewhere, returns true,
-otherwise - false
+if no awsed record exists or a user is enrolled somewhere, returns false,
+otherwise - true
 
 Params:
 
-* name string - a name of user
+- name string - a name of user
 
 Returns:
 
-* bool - weather a user is to be deleted
+- bool - weather a user is to be deleted
 
-* err
+- err
 */
 func (a AWSed) getUserEnrollment(name string) (bool, error) {
 
