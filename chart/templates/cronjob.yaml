@@ -25,6 +25,6 @@
             volumes:
             - name: {{ .Chart.Name }}
               configMap:
-                name: {{ .Chart.Name }}
+                name: {{ .Chart.Name }}-configmap
 {{ toYaml .Values.resources | indent 16 }}
 {{- end }}
