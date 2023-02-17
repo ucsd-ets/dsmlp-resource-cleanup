@@ -109,10 +109,11 @@ func (a AWSed) getUserEnrollment(name string) (bool, error) {
 
 	response, err := http.DefaultClient.Do(request)
 
-	code := response.StatusCode
 	if err != nil {
 		return false, err
 	}
+
+	code := response.StatusCode
 
 	if code >= 200 {
 		return false, nil

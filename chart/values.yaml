@@ -6,10 +6,9 @@ replicaCount: 1
 
 image:
   repository: ghcr.io/ucsd-ets/dsmlp-resource-cleanup
-  tag: test
-  pullPolicy: ucsdetsreg
+  pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
-  tag: ""
+  tag: "test"
 
 imagePullSecrets: []
 nameOverride: ""
