@@ -1,6 +1,6 @@
-mapiVersion: v1
+apiVersion: v1
 kind: ConfigMap
 metadata:
   name: {{ .Chart.Name }}-configmap
 data:
-  config.json: {{ .Values.config | toJson }}
+  config.json: {{ .Values.configmap.config | toJson }}

@@ -87,7 +87,7 @@ configmap:
   enabled: true
   config: |
       {
-          "all_users_url": "https://awsed.ucsd.edu/api/enrollments",
+          "user_url": "https://awsed.ucsd.edu/api/users",
           "active_users_url": "https://awsed.ucsd.edu/api/enrollments?env=dsmlp",
           "volume_extensions": [
               "-dsmlp-datasets",
@@ -105,3 +105,5 @@ cronjob:
 
 serviceAccount:
   enabled: true
+
+awsedApiKey: ""

@@ -325,6 +325,7 @@ func cleanup(k8s K8s, awsed AWSedInterface, dryRun bool) error {
 		}
 
 		log.Println("Will delete namespace", username)
+		println("Will delete namespace", username)
 
 		if !dryRun {
 			err := deleteNamespace(k8s, username)
@@ -338,6 +339,7 @@ func cleanup(k8s K8s, awsed AWSedInterface, dryRun bool) error {
 
 			name := fmt.Sprintf("%v%s", username, volumeType)
 			log.Println("Will delete volume", name)
+			println("Will delete volume", name)
 			if !dryRun {
 				if isPvPresent(k8s, name) {
 
@@ -348,6 +350,7 @@ func cleanup(k8s K8s, awsed AWSedInterface, dryRun bool) error {
 					}
 				} else {
 					log.Println(name, " doesn't exist. Skipping")
+					println(name, " doesn't exist. Skipping")
 				}
 			}
 		}

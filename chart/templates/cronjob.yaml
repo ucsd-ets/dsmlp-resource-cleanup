@@ -14,11 +14,17 @@ spec:
           containers:
             - name: {{ .Chart.Name }}
               image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+              env:
+              - name: AWSED_API_KEY
+                valueFrom:
+                  secretKeyRef:
+                    name: {{ include "expanded-privs-sync-chart.name" . }}
+                    key: AWSED_API_KEY
               stdin: true
               tty: true
               imagePullPolicy: {{ .Values.image.pullPolicy }}
               #{{ toYaml .Values.resources | indent 16 }}
-              #command: ['go', 'run', 'main.go', '--dry-run']
+              command: ['go', 'run', 'main.go', '--dry-run']
               volumeMounts:
               - name:  {{ .Chart.Name }}
                 mountPath: /app/config.json
