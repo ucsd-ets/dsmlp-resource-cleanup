@@ -92,8 +92,7 @@ Returns:
 func (a AWSed) getUserEnrollment(name string) (bool, error) {
 
 	var userRecord AWSedResponse
-
-	reqUrl := fmt.Sprintf("%s/%s", config.UserUrl, name)
+	reqUrl := config.UserUrl + "/" + name
 	request, err := http.NewRequest(
 		http.MethodGet,
 		reqUrl,
