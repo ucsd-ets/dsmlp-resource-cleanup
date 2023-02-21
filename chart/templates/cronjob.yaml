@@ -16,6 +16,7 @@ spec:
               image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
               stdin: true
               tty: true
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
               #{{ toYaml .Values.resources | indent 16 }}
               #command: ['go', 'run', 'main.go', '--dry-run']
               volumeMounts:
