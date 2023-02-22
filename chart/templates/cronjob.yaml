@@ -18,13 +18,13 @@ spec:
               - name: AWSED_API_KEY
                 valueFrom:
                   secretKeyRef:
-                    name:  {{ .Chart.Name }}-api-key
+                    name: {{ .Chart.Name }}-api-key
                     key: AWSED_API_KEY
               stdin: true
               tty: true
               imagePullPolicy: {{ .Values.image.pullPolicy }}
               #{{ toYaml .Values.resources | indent 16 }}
-              command: ['go', 'run', 'main.go', '--dry-run']
+              # command: ['go', 'run', '/app/main.go', '--dry-run']
               volumeMounts:
               - name:  {{ .Chart.Name }}
                 mountPath: /app/config.json
@@ -34,4 +34,7 @@ spec:
           - name: {{ .Chart.Name }}
             configMap:
               name: {{ .Chart.Name }}-configmap
+          - name: {{ .Chart.Name }}-api-key 
+            secret:
+              secretName: {{ .Chart.Name }}-api-key
 {{- end }}
