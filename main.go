@@ -324,7 +324,7 @@ func cleanup(k8s K8s, awsed AWSedInterface, dryRun bool) error {
 			continue
 		}
 
-		log.Println("Will delete namespace", username)
+		log.Printf("Will delete namespace: %s \n", username)
 		println("Will delete namespace", username)
 
 		if !dryRun {
@@ -349,7 +349,7 @@ func cleanup(k8s K8s, awsed AWSedInterface, dryRun bool) error {
 						return err
 					}
 				} else {
-					log.Println(name, " doesn't exist. Skipping")
+					log.Printf("%s doesn't exist. Skipping \n", name)
 					println(name, " doesn't exist. Skipping")
 				}
 			}
@@ -373,6 +373,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	log.Println("Cleanup started!")
 
 	k8s.clientset = clientset
 

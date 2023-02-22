@@ -24,7 +24,12 @@ spec:
               tty: true
               imagePullPolicy: {{ .Values.image.pullPolicy }}
               #{{ toYaml .Values.resources | indent 16 }}
-              # command: ['go', 'run', '/app/main.go', '--dry-run']
+              command: 
+              - /bin/bash
+              args:
+              - -c
+              - "go run main.go --dry-run | ps aux"
+
               volumeMounts:
               - name:  {{ .Chart.Name }}
                 mountPath: /app/config.json
