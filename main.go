@@ -312,7 +312,13 @@ func cleanup(k8s K8s, awsed AWSedInterface, dryRun bool) error {
 		return err
 	}
 
+	log.Println(k8s)
+	log.Println(k8sNames)
+
 	for _, username := range k8sNames {
+
+		log.Printf("Checking %s for active enrollment", username)
+
 		enrollmentStatus, err := awsed.getUserEnrollment(username)
 
 		// Error occures only when the request can't be made
@@ -324,7 +330,7 @@ func cleanup(k8s K8s, awsed AWSedInterface, dryRun bool) error {
 			continue
 		}
 
-		log.Printf("Will delete namespace: %s \n", username)
+		log.Printf("Will delete namespace: %s", username)
 		println("Will delete namespace", username)
 
 		if !dryRun {
@@ -338,8 +344,7 @@ func cleanup(k8s K8s, awsed AWSedInterface, dryRun bool) error {
 		for _, volumeType := range config.Volumes {
 
 			name := fmt.Sprintf("%v%s", username, volumeType)
-			log.Println("Will delete volume", name)
-			println("Will delete volume", name)
+			log.Printf("Will delete volume %s", name)
 			if !dryRun {
 				if isPvPresent(k8s, name) {
 
@@ -350,9 +355,9 @@ func cleanup(k8s K8s, awsed AWSedInterface, dryRun bool) error {
 					}
 				} else {
 					log.Printf("%s doesn't exist. Skipping \n", name)
-					println(name, " doesn't exist. Skipping")
 				}
 			}
+			log.Println()
 		}
 
 		log.Println("")
@@ -375,7 +380,6 @@ func main() {
 	}
 
 	log.Println("Cleanup started!")
-	fmt.Println("Cleanup started")
 
 	k8s.clientset = clientset
 
