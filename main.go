@@ -93,6 +93,9 @@ func (a AWSed) getUserEnrollment(name string) (bool, error) {
 
 	var userRecord AWSedResponse
 	reqUrl := config.UserUrl + "/" + name
+
+	log.Println(reqUrl)
+
 	request, err := http.NewRequest(
 		http.MethodGet,
 		reqUrl,
@@ -108,16 +111,13 @@ func (a AWSed) getUserEnrollment(name string) (bool, error) {
 
 	response, err := http.DefaultClient.Do(request)
 
-	log.Println(response)
-	log.Println(err)
-
 	if err != nil {
 		return false, err
 	}
 
 	code := response.StatusCode
 
-	if code >= 200 {
+	if code > 200 {
 		return false, nil
 	}
 
