@@ -108,6 +108,9 @@ func (a AWSed) getUserEnrollment(name string) (bool, error) {
 
 	response, err := http.DefaultClient.Do(request)
 
+	log.Println(response)
+	log.Println(err)
+
 	if err != nil {
 		return false, err
 	}
