@@ -23,8 +23,11 @@ spec:
               stdin: true
               tty: true
               imagePullPolicy: {{ .Values.image.pullPolicy }}
-              #{{ toYaml .Values.resources | indent 16 }}
+              {{ if .Values.dryRun }}
               command: ['go', 'run', 'main.go', '--dry-run']
+              {{ else }}
+              command: ['go', 'run', 'main.go']
+              {{ end }}
               volumeMounts:
               - name:  {{ .Chart.Name }}
                 mountPath: /app/config.json

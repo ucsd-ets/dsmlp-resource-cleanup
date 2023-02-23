@@ -390,6 +390,7 @@ func main() {
 		arg := os.Args[1]
 
 		if arg == "--dry-run" {
+			log.Println("Cleanup started in Dry Run mode")
 			err := cleanup(k8s, awsed, true)
 			if err != nil {
 				log.Fatal(err)
