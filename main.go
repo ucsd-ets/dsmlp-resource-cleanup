@@ -375,6 +375,7 @@ func main() {
 	}
 
 	log.Println("Cleanup started!")
+	fmt.Println("Cleanup started")
 
 	k8s.clientset = clientset
 
