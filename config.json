@@ -1,0 +1,14 @@
+{
+    "user_url": "https://awsed.ucsd.edu/api/users",
+    "active_users_url": "https://awsed.ucsd.edu/api/enrollments?env=dsmlp",
+    "volume_extensions": [
+        "",
+        "-dsmlp-datasets",
+        "-dsmlp-datasets-nfs",
+        "-home",
+        "-home-nfs",
+        "-nbgrader",
+        "-support",
+        "-teams"
+    ]
+}

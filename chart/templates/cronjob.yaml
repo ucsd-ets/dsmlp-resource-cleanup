@@ -1,0 +1,43 @@
+{{- if .Values.cronjob.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ .Chart.Name }}-cronjob
+spec:
+  schedule: {{ .Values.syncSchedule }}
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: default
+          automountServiceAccountToken: true 
+          containers:
+            - name: {{ .Chart.Name }}
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+              env:
+              - name: AWSED_API_KEY
+                valueFrom:
+                  secretKeyRef:
+                    name: {{ .Chart.Name }}-api-key
+                    key: AWSED_API_KEY
+              stdin: true
+              tty: true
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              {{ if .Values.dryRun }}
+              command: ['go', 'run', 'main.go', '--dry-run']
+              {{ else }}
+              command: ['go', 'run', 'main.go']
+              {{ end }}
+              volumeMounts:
+              - name:  {{ .Chart.Name }}
+                mountPath: /app/config.json
+                subPath: config.json
+          restartPolicy: OnFailure
+          volumes:
+          - name: {{ .Chart.Name }}
+            configMap:
+              name: {{ .Chart.Name }}-configmap
+          - name: {{ .Chart.Name }}-api-key 
+            secret:
+              secretName: {{ .Chart.Name }}-api-key
+{{- end }}

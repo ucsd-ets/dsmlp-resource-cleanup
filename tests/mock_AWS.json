@@ -1,0 +1,43 @@
+[{
+  "username": "btice",
+  "firstName": "brian",
+  "lastName": "tice",
+  "uid": 130507,
+  "enrollments": [
+    "MUS206_WI23_D00"
+  ]
+},
+{
+  "username": "pbotros",
+  "firstName": "Paul",
+  "lastName": "Botros",
+  "uid": 1177806,
+  "enrollments": [
+  ]
+},
+{
+  "username": "pbotros",
+  "firstName": "Paul",
+  "lastName": "Botros",
+  "uid": 1177806,
+  "enrollments": [
+    "RITS_RESEARCHER"
+  ]
+},
+{
+    "username": "n2nazar",
+    "firstName": "narcisa",
+    "lastName": "nazar",
+    "uid": 91782,
+    "enrollments": [
+    ]
+},
+{
+  "username": "tix034",
+  "firstName": "tianyao",
+  "lastName": "xu",
+  "uid": 19276,
+  "enrollments": [
+    "CMM262_WI23_A00"
+  ]
+}]
