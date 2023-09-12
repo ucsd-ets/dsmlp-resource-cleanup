@@ -404,5 +404,6 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
+		log.Println("job=k8s-sync, status=complete")
 	}
 }
