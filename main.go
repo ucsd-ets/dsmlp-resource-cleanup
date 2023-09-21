@@ -226,7 +226,10 @@ func listNamespaces(k8s K8s) ([]string, error) {
 	}
 
 	for _, n := range namspaceList.Items {
-		dslmpNamespacelist = append(dslmpNamespacelist, n.Name)
+		_, ok := n.Labels["k8s-sync"]
+		if ok {
+			dslmpNamespacelist = append(dslmpNamespacelist, n.Name)
+		}
 	}
 
 	return dslmpNamespacelist, err
